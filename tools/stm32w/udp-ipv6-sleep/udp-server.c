@@ -58,9 +58,9 @@ tcpip_handler(void)
     PRINTF("\n");
 
     uip_ipaddr_copy(&server_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
-    PRINTF("Responding with message: ");
+    //PRINTF("Responding with message: ");
     //sprintf(buf, "Hello from the server! (%d)", ++seq_id);
-    sprintf(buf, "Server response to:(%s)!", (char *)uip_appdata);
+    sprintf(buf, "Server response (%s)!", (char *)uip_appdata);
     PRINTF("%s\n", buf);
 
     uip_udp_packet_send(server_conn, buf, strlen(buf));
@@ -100,10 +100,11 @@ PROCESS_THREAD(udp_server_process, ev, data)
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
 #endif /* UIP_CONF_ROUTER */
-
+  uip_ipaddr_t ipaddr;
+  uip_ip6addr(&ipaddr,0xfe80,0,0,0,0x0280,0xe102,0x11,0xe100); //to trigger ND for fast reaction upon first packet
   print_local_addresses();
 
-  server_conn = udp_new(NULL, UIP_HTONS(3001), NULL);
+  server_conn = udp_new(&ipaddr, UIP_HTONS(3001), NULL);
   udp_bind(server_conn, UIP_HTONS(3000));
 
   while(1) {

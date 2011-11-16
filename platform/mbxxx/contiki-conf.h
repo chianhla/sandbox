@@ -87,7 +87,7 @@ typedef unsigned short uip_stats_t;
 #define NETSTACK_CONF_MAC		csma_driver
 #define NETSTACK_CONF_RDC		contikimac_driver
 #define NETSTACK_CONF_FRAMER		framer_802154
-
+#define CSMA_CONF_MAX_MAC_TRANSMISSIONS 1
 #define RIMEADDR_CONF_SIZE              8
 #define UIP_CONF_LL_802154              1
 

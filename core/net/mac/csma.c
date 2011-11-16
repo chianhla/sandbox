@@ -267,7 +267,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
 /*---------------------------------------------------------------------------*/
 static void
 send_packet(mac_callback_t sent, void *ptr)
-{
+{ 
   struct queued_packet *q;
   static uint16_t seqno;
   
@@ -290,6 +290,7 @@ send_packet(mac_callback_t sent, void *ptr)
           q->max_transmissions =
             packetbuf_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS);
         }
+        q->max_transmissions = CSMA_MAX_MAC_TRANSMISSIONS;
         q->transmissions = 0;
         q->collisions = 0;
         q->deferrals = 0;
@@ -346,9 +347,10 @@ channel_check_interval(void)
 /*---------------------------------------------------------------------------*/
 static void
 init(void)
-{
+{ 
   memb_init(&packet_memb);
   rdc_is_transmitting = 0;
+  
 }
 /*---------------------------------------------------------------------------*/
 const struct mac_driver csma_driver = {

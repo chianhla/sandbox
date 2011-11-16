@@ -39,7 +39,7 @@
 #define DEBUG DEBUG_PRINT
 #include "net/uip-debug.h"
 
-#define SEND_INTERVAL		10 * CLOCK_SECOND
+#define SEND_INTERVAL		5 * CLOCK_SECOND
 
 /* Seconds during which the system must be in deep sleep.
  * During deep sleep all the OS is frozen. */
@@ -154,7 +154,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
   PRINTF(" local/remote port %u/%u\n",
 	UIP_HTONS(client_conn->lport), UIP_HTONS(client_conn->rport));
 
-  etimer_set(&et, CLOCK_SECOND*10);
+  etimer_set(&et, CLOCK_SECOND*20);
   PROCESS_WAIT_UNTIL(etimer_expired(&et)); // Wait for DAD and Router Discovery procedure to end.
 
   etimer_set(&et, SEND_INTERVAL);

@@ -123,11 +123,11 @@ set_rime_addr(void)
   rimeaddr_set_node_addr((rimeaddr_t *)&eui64.u8[8-RIMEADDR_SIZE]);
 #endif
 
-  printf("Rime started with address ");
+  PRINTF("Rime started with address ");
   for(i = 0; i < sizeof(rimeaddr_t) - 1; i++) {
-    printf("%d.", rimeaddr_node_addr.u8[i]);
+    PRINTF("%d.", rimeaddr_node_addr.u8[i]);
   }
-  printf("%d\n", rimeaddr_node_addr.u8[i]);
+  PRINTF("%d\r\n", rimeaddr_node_addr.u8[i]);
   
 }
 /*---------------------------------------------------------------------------*/
@@ -167,9 +167,17 @@ main(void)
   process_start(&etimer_process, NULL);   
   ctimer_init();
   rtimer_init();
+  
   netstack_init();
   set_rime_addr();
-  procinit_init();
+  
+  
+PRINTF("ACK enable=%u %s %s, channel check rate=%luHz, check interval %ums, clock second=%u, radio channel %u\r\n",
+         ST_RadioAutoAckEnabled(), NETSTACK_MAC.name, NETSTACK_RDC.name,  
+         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
+                         NETSTACK_RDC.channel_check_interval()), NETSTACK_RDC.channel_check_interval(), CLOCK_SECOND,
+         RF_CHANNEL);
+  
 #if !UIP_CONF_IPV6
   ST_RadioEnableAutoAck(FALSE); // Because frames are not 802.15.4 compatible. 
   ST_RadioEnableAddressFiltering(FALSE);
@@ -177,12 +185,8 @@ main(void)
   ST_RadioEnableAutoAck(TRUE);
 
   
-   
-    printf("ACK enable=%u %s %s, channel check rate=%luHz, check interval %ums, clock second=%u, radio channel %u\n",
-         ST_RadioAutoAckEnabled(), NETSTACK_MAC.name, NETSTACK_RDC.name,  
-         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
-                         NETSTACK_RDC.channel_check_interval()), NETSTACK_RDC.channel_check_interval(), CLOCK_SECOND,
-         RF_CHANNEL);
+  procinit_init(); 
+    
 
 
   energest_init();
