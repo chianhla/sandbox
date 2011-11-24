@@ -56,7 +56,7 @@
 #include <string.h>
 
 #ifndef WITH_PHASE_OPTIMIZATION
-#define WITH_PHASE_OPTIMIZATION      0
+#define WITH_PHASE_OPTIMIZATION      1
 #endif
 #ifndef WITH_STREAMING
 #define WITH_STREAMING               0
@@ -129,7 +129,7 @@ struct hdr {
 
 /* GUARD_TIME is the time before the expected phase of a neighbor that
    a transmitted should begin transmitting packets. */
-#define GUARD_TIME                         11 * CHECK_TIME
+
 
 /* INTER_PACKET_INTERVAL is the interval between two successive packet transmissions */
 #define INTER_PACKET_INTERVAL              RTIMER_ARCH_SECOND / 5000//1500//1500/1154
@@ -138,11 +138,11 @@ struct hdr {
    ACK packet has been detected until we can read it out from the
    radio. */
 #define AFTER_ACK_DETECTECT_WAIT_TIME      RTIMER_ARCH_SECOND / 1500
-
+#define AFTER_ON      RTIMER_ARCH_SECOND / 5000
 /* MAX_PHASE_STROBE_TIME is the time that we transmit repeated packets
    to a neighbor for which we have a phase lock. */
 #define MAX_PHASE_STROBE_TIME              RTIMER_ARCH_SECOND / 60
-
+#define GUARD_TIME                         4 * CHECK_TIME
 
 /* SHORTEST_PACKET_SIZE is the shortest packet that ContikiMAC
    allows. Packets have to be a certain size to be able to be detected
@@ -315,15 +315,15 @@ powercycle(struct rtimer *t, void *ptr)
   PT_BEGIN(&pt);
 
   cycle_start = RTIMER_NOW();
-  rtimer_clock_t wt1, wt2;
+  rtimer_clock_t wt, wt1, wt2;
      wt1 = RTIMER_NOW();	
      
      
-//wt2 = RTIMER_NOW();
+  wt2 = RTIMER_NOW();
   while(1) {
-//wt1 = RTIMER_NOW();
-//printf("contikimac: powercycle time %lu!\n", (signed long)(wt1 - wt2));
-//wt2=wt1; 
+  wt1 = RTIMER_NOW();
+  //printf("contikimac: powercycle time %lu!\n", (signed long)(wt1));
+  wt2=wt1; 
     static uint8_t packet_seen;
     static rtimer_clock_t t0;
     static uint8_t count;
@@ -345,6 +345,9 @@ powercycle(struct rtimer *t, void *ptr)
         t0 = RTIMER_NOW();
         if(we_are_sending == 0) {
           powercycle_turn_radio_on();
+ //wt = RTIMER_NOW();
+//wt1 = RTIMER_NOW();
+     //while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + AFTER_ON)) { }
           /* Check if a packet is seen in the air. If so, we keep the
              radio on for a while (LISTEN_TIME_AFTER_PACKET_DETECTED) to
              be able to receive the packet. We also continuously check
@@ -412,6 +415,7 @@ powercycle(struct rtimer *t, void *ptr)
           
           schedule_powercycle(t, CCA_CHECK_TIME + CCA_SLEEP_TIME);
           PT_YIELD(&pt);
+
         }
         if(radio_is_on) {
           if(!(NETSTACK_RADIO.receiving_packet() ||
@@ -573,10 +577,11 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr)
     transmit_len = SHORTEST_PACKET_SIZE;
   }
 
-
-  packetbuf_compact();
-  NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
   
+  packetbuf_compact();
+  int plen = packetbuf_totlen();	
+  NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
+  //printf("contikimac: packet length (%d) + 2 \n", packetbuf_totlen());
   /* Remove the MAC-layer header since it will be recreated next time around. */
   packetbuf_hdr_remove(hdrlen);
 
@@ -665,12 +670,13 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr)
   on();
   watchdog_periodic();
   t0 = RTIMER_NOW();
-//rtimer_clock_t wt1, wt2;
+rtimer_clock_t wt1, wt2;
 //printf("STROBE_TIME=%u\n",STROBE_TIME );
+previous_txtime = RTIMER_NOW();
   for(strobes = 0, collisions = 0;
       got_strobe_ack == 0 && collisions == 0 &&
       RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME); strobes++) {
-//wt1 = RTIMER_NOW();
+
 
     watchdog_periodic();
     
@@ -678,10 +684,10 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr)
       PRINTF("miss to %d\n", packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0]);
       //break;
     }
-    
+    wt1 = RTIMER_NOW();
     len = 0;
 
-    previous_txtime = RTIMER_NOW();
+    
     {
       rtimer_clock_t wt;
       rtimer_clock_t txtime;
@@ -718,7 +724,8 @@ if(!is_broadcast) {
        
          got_strobe_ack = 1;
          encounter_time = previous_txtime;
-	 printf("contikimac: GOT ACK ST_PHY_ACK_RECEIVED (%u)\n", ret);	
+	 //printf("contikimac: GOT ACK ST_PHY_ACK_RECEIVED (%u)\n", ret);	
+	wt2 = RTIMER_NOW();
          break;
       
      } else if (ret == RADIO_TX_NOACK){
@@ -732,8 +739,14 @@ if(!is_broadcast) {
          collisions++;
      }
  }
-  
-     //printf("we wait here\n");
+    
+     	
+          wt = RTIMER_NOW();
+//wt1 = RTIMER_NOW();
+     //while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) { }
+     
+//wt2 = RTIMER_NOW();
+//printf("contikimac: packet interval %lu!\n", (signed long)(wt2- wt1));
 #else
      wt = RTIMER_NOW();
      while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) { }
@@ -757,6 +770,10 @@ if(!is_broadcast) {
        }
      }
 #endif /*  CONTIKIMAC_CONF_HARDWARE_ACKDETECT */
+     //wt1 = RTIMER_NOW();	
+     
+     
+wt2 = RTIMER_NOW();
 
       previous_txtime = txtime;
     }
@@ -766,12 +783,17 @@ if(!is_broadcast) {
 
   }
   //printf("contikimac: strobe ends\n");
+//printf("contikimac: loop %lu!\n", (signed long)(wt2 - wt1)); 
   off();
   //printf("contikimac: send (strobes=%u) last status %u\n", strobes, ret);
   printf("contikimac: send (strobes=%u, len=%u, %s, %s), done\n", strobes,
-         packetbuf_totlen(),
+         plen,
          got_strobe_ack ? "ack" : "no ack",
          collisions ? "collision" : "no collision");
+  if(is_known_receiver && got_strobe_ack){
+printf("contikimac: ack while in phase lock\n");
+
+}
 #if CONTIKIMAC_CONF_COMPOWER
   /* Accumulate the power consumption for the packet transmission. */
   compower_accumulate(&current_packet);
@@ -810,6 +832,7 @@ if(!is_broadcast) {
 
   if(!is_broadcast) {
     if(collisions == 0 && is_streaming == 0) {
+      //printf("contikimac: phase %lu!\n", (signed long)(encounter_time));
       phase_update(&phase_list, packetbuf_addr(PACKETBUF_ADDR_RECEIVER), encounter_time,
                    ret);
     }

@@ -163,6 +163,7 @@ phase_wait(struct phase_list *list,
            mac_callback_t mac_callback, void *mac_callback_ptr)
 {
   struct phase *e;
+  
   //  const rimeaddr_t *neighbor = packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
   /* We go through the list of phases to find if we have recorded a
      phase for this particular neighbor. If so, we can compute the
@@ -180,20 +181,27 @@ phase_wait(struct phase_list *list,
        on the radio within the CYCLE_TIME period, we compute the
        waiting time with modulo CYCLE_TIME. */
     
-    /*      printf("neighbor phase 0x%02x (cycle 0x%02x)\n", e->time & (cycle_time - 1),
-            cycle_time);*/
+    //printf("neighbor phase 0x%02x (cycle 0x%02x)\n", e->time & (cycle_time - 1),
+    //        cycle_time);
 
     /*      if(e->noacks > 0) {
             printf("additional wait %d\n", additional_wait);
             }*/
-    
     now = RTIMER_NOW();
+    //printf("contikimac: last encounter %lu now %lu \n", (unsigned long)e->time, (unsigned long)now); 
+    
     wait = (rtimer_clock_t)((e->time - now) &
                             (cycle_time - 1));
+    //printf("contikimac: wait time 1 %lu \n", (unsigned long)wait); 
+    wait = (rtimer_clock_t)((now - e->time) &
+                            (cycle_time));
+    //printf("contikimac: wait time 2 %lu \n", (unsigned long)wait); 
+    wait = (rtimer_clock_t)((cycle_time - (now - e->time)%(cycle_time)));
+    //printf("contikimac: wait time 3 %lu \n", (unsigned long)wait); 
     if(wait < guard_time) {
-      wait += cycle_time;
+      wait = guard_time;
     }
-    
+    //printf("contikimac: wait time %lu \n", (unsigned long)wait); 
     ctimewait = (CLOCK_SECOND * (wait - guard_time)) / RTIMER_ARCH_SECOND;
     
     if(ctimewait > PHASE_DEFER_THRESHOLD) {
